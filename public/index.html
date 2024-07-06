@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>App</title>
+  <meta charset="utf-8" />
+  <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/4/4b/Cloudflare_Logo.svg">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/umd/locale/en.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js"></script>
+  <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet'>
+</head>
+
+<body>
+  <div id="app">
+    <el-row>
+      <el-col :span="24">
+            <div>
+              <h4>
+                <span>{{getAppTile}}</span>
+              </h4>
+            </div>
+            <div>
+              <el-form :inline="true">
+                <el-form-item label="Access Token">
+                  <el-input v-model="token"  size="small" style="width: 200px;" type="password"></el-input>
+                </el-form-item>
+                <el-form-item label="Cloudfare Token" >
+                  <el-input v-model="formDns.token" size="small" style="width: 300px;" type="password"></el-input>
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="info" @click="saveConfig" size="small" :loading="loading" >Save Config</el-button>
+                </el-form-item>
+              </el-form>
+            </div>
+            <div v-if="authed">
+              <el-tabs v-model="tabActive">
+                <el-tab-pane label="Cloudfare DNS" name="cloudfare-dns">            
+                    <el-row>
+                      <el-form :inline="true">
+                        <el-form-item label="Select Ip">
+                          <el-select v-model="setSource" size="small" style="width: 250px" @change="onSource" filterable>
+                            <el-option
+                              v-for="item in listWanIp"
+                              :key="item.name"
+                              :label="item.label"
+                              :value="item.name">
+                            </el-option>
+                          </el-select>
+                        </el-form-item>
+                        <el-form-item label="Select Address">
+                          <el-select v-model="setWan"  size="small" style="width: 250px">
+                            <el-option
+                              v-for="item in listAddressIp"
+                              :key="item.address"
+                              :label="item.label"
+                              :value="item.address">
+                            </el-option>
+                          </el-select>
+                        </el-form-item>
+
+                        <el-form-item label="Set Ip">
+                          <el-input v-model="setIp"  size="small" style="width: 200px;"></el-input>
+                        </el-form-item>
+                          
+                        <el-form-item>
+                          <el-button type="success" @click="setDnsIp" size="small" :loading="loading">Set Dns Ip</el-button>
+                        </el-form-item>
+                        <el-form-item>
+                          <el-button type="warning" @click="setWanIp" size="small" :loading="loading">Set Wan Ip</el-button>
+                        </el-form-item>
+                      </el-form>
+                    </el-row>
+                    <el-row>
+                      <el-form :inline="true">
+                        <el-form-item label="Type DNS">
+                          <el-select v-model="formDns.type" size="small" style="width: 100px;">
+                            <el-option v-for="item in option.type" :key="item" :label="item" :value="item"></el-option>
+                          </el-select>
+                        </el-form-item>
+                        <el-form-item label="SubDomain">
+                          <el-input v-model="formDns.sub" size="small" style="width: 150px;">
+                          </el-input>
+                        </el-form-item>
+                        <el-form-item label="Primary Domain">
+                          <el-input v-model="formDns.domain" size="small"
+                            style="width: 250px;"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                          <el-switch v-model="formDns.is_proxy" @change="onChange(row)" active-text="Use Proxy"></el-switch>
+                        </el-form-item>
+                        <el-form-item>
+                          <el-button type="primary" @click="onSubmit" size="small" :loading="loading">Add Dns</el-button>
+                        </el-form-item>
+                      </el-form>
+                    </el-row>
+                    <el-row>
+                      <el-table :data="listDnsTable" style="width: 100%" :row-class-name="rowTableDnsColor" height="800" border
+                        size="small">
+                        <el-table-column type="index" label="#" width="50"></el-table-column>
+                        <el-table-column prop="id" label="Id" width="50"></el-table-column>
+                        <el-table-column prop="zone_id" label="ZoneId" width="250"></el-table-column>
+                        <el-table-column label="Active" prop="is_active" width="100">
+                          <template slot-scope="{ row }">
+                            <el-switch v-model="row.is_active" @change="onChange(row)"></el-switch>
+                          </template>
+                        </el-table-column>
+                        <el-table-column prop="type" label="Type" width="100" sortable>
+                          <template slot-scope="{ row }">
+                            <el-select v-model="row.type" placeholder="Type" size="small" @change="onChange(row)">
+                              <el-option v-for="item in option.type" :key="item" :label="item" :value="item"></el-option>
+                            </el-select>
+                          </template>
+                        </el-table-column>
+                        <el-table-column prop="domain" label="Domain" width="150" sortable></el-table-column>
+                        <el-table-column prop="title" label="Sub" width="100" sortable></el-table-column>
+                        <el-table-column prop="name" label="Name" width="200" sortable>
+                          <template slot-scope="{ row }">
+                            <a :href="row.url" target="_blank">
+                              {{row.name}}
+                            </a>
+                          </template>
+                        </el-table-column>
+                        <el-table-column prop="ip" label="IP" sortable></el-table-column>
+                        <el-table-column label="Proxy" prop="is_proxy" width="100">
+                          <template slot-scope="{ row }">
+                            <el-switch v-model="row.is_proxy" @change="onChange(row)"></el-switch>
+                          </template>
+                        </el-table-column>
+                        <el-table-column prop="timeCreate" label="Time Create" sortable></el-table-column>
+                        <el-table-column prop="timeUpdate" label="Time Update" sortable></el-table-column>
+                        <el-table-column label="Action" width="200">
+                          <template slot-scope="{ row }">
+                            <el-button type="primary" @click="onSet(row.id)" size="mini" :loading="row.loading" plain>
+                              <i class="el-icon-refresh"></i>
+                            </el-button>
+                            <el-button type="danger" @click="onRemove(row.id)" size="mini" :loading="row.loading" plain>
+                              <i class="el-icon-delete"></i>
+                            </el-button>
+                          </template>
+                        </el-table-column>
+                      </el-table>
+                    </el-row>
+                  </el-tab-pane>
+                  <el-tab-pane label="Mikrotik PPPOE" name="mikrotik-pppoe">
+                    <div style="text-align: center;">
+                      <el-row>
+                        <el-form :inline="true">
+                          <el-form-item label="Concurrency">
+                            <el-input v-model="resetPppoeConfig.concurrency" size="small" style="width: 100px;" type="number"  @change="setResetPppoeConcurrency"></el-input>
+                          </el-form-item>
+                          <el-form-item label="Wait Stop">
+                            <el-input v-model="resetPppoeConfig.waitForStop" size="small" style="width: 100px;" type="number"  @change="setResetPppoeWaitForStop"></el-input>
+                          </el-form-item>
+                          <el-form-item label="Wait Connect">
+                            <el-input v-model="resetPppoeConfig.waitForConnect" size="small" style="width: 100px;" type="number" @change="setResetPppoeWaitForConnect"></el-input>
+                          </el-form-item>
+                          <el-form-item>
+                            <el-button type="primary" @click="resetAllPppoe(true)" size="small" :loading="resetPppoeConfig.btnLoading">Reset All</el-button>
+                            <el-button type="info" @click="resetAllPppoe(false)" size="small" :loading="resetPppoeConfig.btnLoading">Reset Warterfall</el-button>
+                          </el-form-item>
+                        </el-form>
+                      </el-row>
+                      <el-row>
+                        <el-form :inline="true">
+                          <el-form-item label="Ignore">
+                            <el-input v-model="resetPppoeConfig.ignore" size="small" style="width: 200px;" type="text"  @change="setIgnorePppoe"></el-input>
+                          </el-form-item>
+                          <el-form-item label="Wait Per">
+                            <el-input v-model="resetPppoeConfig.autoDelayPer" size="small" style="width: 100px;" type="number"  @change="setAutoPppoeDelayPer"></el-input>
+                          </el-form-item>
+                          <el-form-item label="Wait All">
+                            <el-input v-model="resetPppoeConfig.autoDelayAll" size="small" style="width: 100px;" type="number" @change="setAutoPppoeDelayAll"></el-input>
+                          </el-form-item>
+                          <el-form-item>
+                            <el-button type="primary" @click="autoResetPpppoe(true)" size="small" :loading="resetPppoeConfig.btnLoading">Auto All</el-button>
+                            <el-button type="info" @click="autoResetPpppoe(false)" size="small" :loading="resetPppoeConfig.btnLoading">Auto Warterfall</el-button>
+                          </el-form-item>
+                          <el-form-item>
+                            {{resetPppoeConfig.log}}
+                          </el-form-item>
+                        </el-form>
+                      </el-row>
+                    </div>
+
+                    <div>
+                      <el-row>
+                        <el-col :span="16" :offset="4">
+                          <el-table :data="listPPOETable" style="width: 100%" :row-class-name="rowTablePppoeColor" height="800" border
+                          size="small">
+                          <el-table-column type="index" label="#"></el-table-column>
+                          <el-table-column label="Checked" prop="isChecked" width="100">
+                            <template slot-scope="{ row }">
+                              <el-switch v-model="row.isChecked"></el-switch>
+                            </template>
+                          </el-table-column>
+                          <el-table-column prop="id" label="Id" ></el-table-column>
+                          <el-table-column prop="name" label="Name"></el-table-column>
+                          <el-table-column prop="ip" label="Ip" ></el-table-column>
+                          <el-table-column prop="lastestIp" label="Lastest Ip" ></el-table-column>
+                          <el-table-column prop="resetCount" label="Reset Count" ></el-table-column>
+                          <el-table-column prop="lastestReset" label="Reset Lastest" ></el-table-column>
+                          <el-table-column prop="log" label="Log" ></el-table-column>
+                          <el-table-column label="Action" >
+                            <template slot-scope="{ row }">
+                              <el-button type="primary" @click="onRsetPppoe(row)" size="mini" :loading="row.isLoading" plain>
+                                <i class="el-icon-refresh"></i>
+                              </el-button>
+                            </template>
+                          </el-table-column>
+                        </el-table>
+                        </el-col>
+                      </el-row>
+                    </div>
+                  </el-tab-pane>
+                </el-tabs>
+            </div>
+            <div v-else-if="!token">
+              <el-alert type="warning" :closable="false">Enter AccessToken to Login</el-alert>
+            </div>
+            <div v-else>
+              <el-alert type="error" :closable="false">Permisssion Error</el-alert>
+            </div>
+        </el-col>
+      </el-row>
+  </div>
+</body>
+  <script src="/script.js"></script>
+  <link href="/style.css" rel="stylesheet">
+</html>

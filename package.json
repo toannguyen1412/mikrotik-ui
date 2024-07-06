@@ -1,0 +1,42 @@
+{
+  "name": "cloudfare-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --env-file=.env.dev ./index.js",
+    "dev": "nodemon --env-file=.env.dev ./index.js",
+    "db:up": "node ./src/tasks/db.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/static": "^6.9.0",
+    "bluebird": "^3.5.4",
+    "cloudflare": "^2.9.1",
+    "delay": "^5.0.0",
+    "domain-ping": "^0.2.1",
+    "dotenv": "^16.0.3",
+    "fastify": "^4.14.0",
+    "fastq": "^1.13.0",
+    "getenv": "^1.0.0",
+    "lodash": "^4.17.21",
+    "mysql2": "^3.1.2",
+    "node-cache": "^5.1.2",
+    "p-map": "^4.0.0",
+    "pm2": "^5.2.2",
+    "public-ip": "^4.0.4",
+    "random-array-picker": "^1.0.1",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.5",
+    "sequelize": "^6.29.0",
+    "set-interval-async": "^3.0.3",
+    "socks-proxy-agent": "^4.0.2",
+    "sqlite3": "^5.1.4"
+  },
+  "devDependencies": {
+    "eslint": "^8.35.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.27.5"
+  }
+}

@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  cloudfare-dns:
+    build: .
+    image: toannt1412/cloudfare-dns:v5
+    container_name: cloudfare-dns
+    ports:
+      - "3000:3000"
+    volumes:
+     - "./database/:/usr/src/app/database"
